@@ -55,6 +55,29 @@ Case B: Publish(Notification Or Report)
 
 > mqtt client publish topic: report/coord/100111 and payload: e.g. 110.12345678,30.12345678,0,85
 
+Coding:
+------
+MQTT subscribe topic:  "channel/count/100001" will handle at:
+``` 
+    class ChannelController{
+        public function actionCount($channel_id){
+            echo "client {$this->fd} subscribed the count change of channel {$channel_id}";
+        }
+    }
+```
+> //client 1 subscribed the count change of channel 100001
+
+
+MQTT Publish Topic:  "channel/join/100001"  with payload: "Foo"  will handle at:
+```  
+    class ChannelController{
+        public function actionJoin($channel_id, $who){
+            echo "{$who} join in channel {$channel_id}";
+        }
+    }
+```
+> // Foo join in channel 100001
+
 MQTT
 ----
 
