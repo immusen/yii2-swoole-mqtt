@@ -8,9 +8,9 @@
 
 namespace mqtt\controllers;
 
-use immusen\mqtt\base\BaseController;
+use immusen\mqtt\src\Controller;
 
-class ReportController extends BaseController
+class ReportController extends Controller
 {
     /**
      * Verb: publish

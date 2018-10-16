@@ -8,9 +8,9 @@
 
 namespace mqtt\controllers;
 
-use immusen\mqtt\base\BaseController;
+use immusen\mqtt\src\Controller;
 
-class NoticeController extends BaseController
+class NoticeController extends Controller
 {
 
     /**

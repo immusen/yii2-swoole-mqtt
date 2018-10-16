@@ -8,9 +8,9 @@
 
 namespace mqtt\controllers;
 
-use immusen\mqtt\base\BaseController;
+use immusen\mqtt\src\Controller;
 
-class RoomController extends BaseController
+class RoomController extends Controller
 {
 
     /**
@@ -28,7 +28,7 @@ class RoomController extends BaseController
 
     /**
      * Verb: publish
-     * Client who join a room, then send a notice to server by publish, publish to a topic e.g. room/view/100001, and can submit user info into $payload about somebody who join
+     * Client who join a room, then send a notice to server by publish, publish to a topic e.g. room/join/100001, and can submit user info into $payload about somebody who join
      * also support redis pub/sub, so you can trigger this method by Yii::$app->redis->publish('async', 'room/join/100001') in your Yii Web application
      * @param $room_id
      * @param $payload

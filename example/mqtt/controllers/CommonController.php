@@ -8,9 +8,9 @@
 
 namespace mqtt\controllers;
 
-use immusen\mqtt\base\BaseController;
+use immusen\mqtt\src\Controller;
 
-class CommonController extends BaseController
+class CommonController extends Controller
 {
     public function actionDefault($_)
     {

@@ -12,6 +12,7 @@ return [
     'bootstrap' => ['log'],
     'controllerNamespace' => 'mqtt\controllers',
     'components' => [
+        'auth' => ['class' => 'mqtt\components\Auth'],
         'errorHandler' => ['class' => 'yii\console\ErrorHandler'],
         'log' => [
             'targets' => [

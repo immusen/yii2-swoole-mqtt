@@ -11,8 +11,8 @@ namespace immusen\mqtt;
 use Yii;
 use Swoole\Server;
 use Swoole\Coroutine\Redis;
-use immusen\mqtt\base\MqttTrait;
-use immusen\mqtt\base\Task;
+use immusen\mqtt\src\MqttTrait;
+use immusen\mqtt\src\Task;
 
 class Application extends \yii\base\Application
 {
@@ -29,7 +29,7 @@ class Application extends \yii\base\Application
             'open_mqtt_protocol' => 1,
             'task_ipc_mode' => 3,
             'debug_mode' => 1,
-//            'daemonize' => 1,   //if daemonize=1, all print will append to log_file
+           'daemonize' => Yii::$app->params['daemonize'],
             'log_file' => Yii::$app->getRuntimePath() . '/logs/app.log'
         ]);
         $server->on('Start', [$this, 'onStart']);
