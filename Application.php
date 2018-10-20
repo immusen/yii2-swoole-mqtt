@@ -9,10 +9,9 @@
 namespace immusen\mqtt;
 
 use Yii;
-use immusen\mqtt\src\Mqtt;
 use Swoole\Server;
 use Swoole\Coroutine\Redis;
-use immusen\mqtt\src\MqttTrait;
+use immusen\mqtt\src\Mqtt;
 use immusen\mqtt\src\Task;
 
 class Application extends \yii\base\Application
@@ -49,11 +48,9 @@ class Application extends \yii\base\Application
         $this->server->start();
     }
 
-    use MqttTrait;
-
     public function onStart($server)
     {
-        $this->debug("Server Start {$server->master_pid}");
+        echo "Server Start {$server->master_pid}" . PHP_EOL;
     }
 
     public function onWorkerStart(Server $server, $id)

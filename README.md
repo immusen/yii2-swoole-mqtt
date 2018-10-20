@@ -35,8 +35,17 @@ Test or Usage
 mv vendor/immusen/yii2-swoole-mqtt/example/mqtt ./
 mv vendor/immusen/yii2-swoole-mqtt/example/mqtt-server ./
 chmod a+x ./mqtt-server
+# run:
 ./mqtt-server
-# or coding in ./mqtt/controllers
+# config :
+cat ./mqtt/config/params.php
+<?php
+return [
+    'listen' => 8721,
+    'daemonize' => 0,
+    'auth' => 1, // config auth class in ./main.php
+];
+# or coding in ./mqtt/controllers/
 ```
 
 Test client: MQTTLens, MQTT.fx

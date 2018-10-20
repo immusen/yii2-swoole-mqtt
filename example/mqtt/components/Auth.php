@@ -12,7 +12,7 @@ class Auth
 {
     /**
      * Client connect Auth
-     * @param array $data , connect_info @see \immusen\mqtt\src\MqttTrait
+     * @param array $data , connect_info @see \immusen\mqtt\src\Mqtt
      * @return bool
      */
     public static function judge(Array $data)
