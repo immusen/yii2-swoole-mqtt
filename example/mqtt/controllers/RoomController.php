@@ -21,14 +21,14 @@ class RoomController extends Controller
     public function actionCount($room_id)
     {
         //get current count
-        $online_count = $this->server->redis->hget('mqtt_record_hash_#room', $room_id);
+        $count = $this->server->redis->hget('mqtt_record_hash_#room', $room_id);
         //reply current count
-        $this->publish([$this->fd], $this->topic, $online_count);
+        $this->publish($this->fd, $this->topic, $count ?: 0);
     }
 
     /**
      * Verb: publish
-     * Client who join a room, then send a notice to server by publish, publish to a topic e.g. room/join/100001, and can submit user info into $payload about somebody who join
+     * Client who join a room, send a PUBLISH to server, with a topic e.g. room/join/100001, and submit user info into $payload about somebody who join
      * also support redis pub/sub, so you can trigger this method by Yii::$app->redis->publish('async', 'room/join/100001') in your Yii Web application
      * @param $room_id
      * @param $payload

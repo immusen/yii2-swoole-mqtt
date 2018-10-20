@@ -7,7 +7,10 @@
  */
 
 namespace immusen\mqtt\src;
-
+/**
+ * Class Task Model
+ * @package immusen\mqtt\src
+ */
 class Task
 {
     public $fd = 0;
@@ -18,12 +21,18 @@ class Task
     public $body = '';
     public $verb = 'publish';
 
+    const VERB_PUBLISH = 'publish';
+    const VERB_SUBSCRIBE = 'subscribe';
+    const VERB_ASYNC = 'async';
+    const VERB_INTERNAL = 'internal';
+
     public function __construct($fd, $topic, $payload = '', $verb = 'publish')
     {
         $this->fd = $fd;
         $this->topic = $topic;
         $this->resolve($topic);
         $this->body = $payload;
+        $this->verb = $verb;
     }
 
     /**
@@ -36,7 +45,6 @@ class Task
      */
     public static function publish($fd, $topic, $payload = '')
     {
-        if (empty($fd)) throw new \Exception('fd missed');
         return new static($fd, $topic, $payload, 'publish');
     }
 
@@ -49,7 +57,6 @@ class Task
      */
     public static function subscribe($fd, $topic)
     {
-        if (empty($fd)) throw new \Exception('fd missed');
         return new static($fd, $topic, 'subscribe');
     }
 
@@ -62,14 +69,24 @@ class Task
      * @param $message
      * @return static
      */
-    public static function supervisor($message)
+    public static function async($message)
     {
-        return new static(0, $message, '', 'supervisor');
+        return new static(0, $message, '', 'async');
+    }
+
+    /**
+     * internal job
+     * @param $route
+     * @param $param
+     * @return static
+     */
+    public static function internal($route, $param = '')
+    {
+        return new static(0, $route, $param, 'internal');
     }
 
     private function resolve($topic)
     {
-        if (empty($topic)) throw new \Exception('topic missed');
         if (preg_match('/(\w+)\/?(\w*)\/?(.*)/', $topic, $routes)) {
             $this->class = $routes[1];
             $this->func = isset($routes[2]) ? $routes[2] : 'default';

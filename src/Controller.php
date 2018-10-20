@@ -37,9 +37,11 @@ class Controller
      * @param $fds
      * @param $topic
      * @param $connect
+     * @return bool;
      */
     public function publish($fds, $topic, $connect)
     {
+        if (!is_array($fds)) $fds = array($fds);
         $msg = $this->buildBuffer($topic, $connect);
         $result = 1;
         do {

@@ -9,6 +9,7 @@
 namespace immusen\mqtt;
 
 use Yii;
+use immusen\mqtt\src\Mqtt;
 use Swoole\Server;
 use Swoole\Coroutine\Redis;
 use immusen\mqtt\src\MqttTrait;
@@ -29,7 +30,7 @@ class Application extends \yii\base\Application
             'open_mqtt_protocol' => 1,
             'task_ipc_mode' => 3,
             'debug_mode' => 1,
-           'daemonize' => Yii::$app->params['daemonize'],
+            'daemonize' => Yii::$app->params['daemonize'],
             'log_file' => Yii::$app->getRuntimePath() . '/logs/app.log'
         ]);
         $server->on('Start', [$this, 'onStart']);
@@ -68,7 +69,7 @@ class Application extends \yii\base\Application
                 //Redis pub/sub feature; Follow the task structure, Recommend use redis publish like this: redis->publish('async', 'send/sms/15600008888').
                 $result = $redis->subscribe(['async']);
                 if ($result)
-                    $server->task(Task::supervisor($result[2]));
+                    $server->task(Task::async($result[2]));
             }
         });
     }
@@ -78,17 +79,34 @@ class Application extends \yii\base\Application
 
     }
 
-    public function onReceive(Server $server, $fd, $from_id, $data)
+    public function onReceive(Server $server, $fd, $from, $buffer)
     {
-        $this->mqttDecode($data, $server, $fd);
+        go(function () use ($server, $fd, $buffer) {
+            try {
+                $m = new Mqtt($buffer);
+                if ($m->tp == Mqtt::TP_CONNECT && Yii::$app->params['auth'])
+                    if (Yii::$app->auth->judge($m->connectInfo) === false) $m->setReplyMessage(Mqtt::REPLY_CONNACK_NO_AUTH);
+                if (!is_null($m->replyMessage))
+                    $server->send($fd, $m->replyMessage);
+                if ($m->tp === Mqtt::TP_PUBLISH) return $server->task(Task::publish($fd, $m->topic, $m->payload));
+                if ($m->tp === Mqtt::TP_SUBSCRIBE) {
+                    $server->task(Task::internal('common/redis/sadd', ['mqtt_sub_fds_set_#' . $m->topic, $fd]));
+                    $server->task(Task::subscribe($fd, $m->topic));
+                } elseif ($m->tp === Mqtt::TP_UNSUBSCRIBE) {
+                    $server->task(Task::internal('common/redis/srem', ['mqtt_sub_fds_set_#' . $m->topic, $fd]));
+                } elseif ($m->tp === Mqtt::TP_DISCONNECT) {
+                    $server->task(Task::internal('common/close/' . $fd));
+                }
+            } catch (\Exception $e) {
+                var_dump($e->getMessage());
+                $server->task(Task::internal('common/close/' . $fd));
+            }
+        });
     }
 
-    public function onClose($server, $fd, $from_id)
+    public function onClose($server, $fd, $from)
     {
-        if ($uid = $server->redis->hget('mqtt_online_hash_uid@fd', $fd)) {
-            $server->redis->hdel('mqtt_online_hash_fd@uid', $uid);
-            $server->redis->hdel('mqtt_online_hash_uid@fd', $fd);
-        }
+        $server->task(Task::internal('common/close/' . $fd));
     }
 
     public function onTask(Server $server, $worker_id, $task_id, $task)
@@ -108,7 +126,7 @@ class Application extends \yii\base\Application
 
     public function onFinish(Server $server, $task_id, $data)
     {
-        echo 'Task finished ' . PHP_EOL;
+        echo 'Task finished #' . $task_id . PHP_EOL;
         var_dump($data);
     }
 
