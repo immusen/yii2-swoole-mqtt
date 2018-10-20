@@ -31,12 +31,12 @@ Test or Usage
 -------------
 
 ```
-#after installation, cd project root path, e.g. cd yii2-advanced-project/
+# after installation, cd project root path, e.g. cd yii2-advanced-project/
 mv vendor/immusen/yii2-swoole-mqtt/example/mqtt ./
 mv vendor/immusen/yii2-swoole-mqtt/example/mqtt-server ./
 chmod a+x ./mqtt-server
 ./mqtt-server
-#or coding in ./mqtt/controllers
+# or coding in ./mqtt/controllers
 ```
 
 Test client: MQTTLens, MQTT.fx
@@ -81,16 +81,6 @@ MQTT Publish Topic:  "channel/join/100001"  with payload: "Foo"  will handle at:
 MQTT
 ----
 
-About MQTT: [MQTT Version 3.1.1](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html)
+About MQTT: [MQTT Version 3.1.1 Plus Errata 01](http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/mqtt-v3.1.1.html)
 
-Thanks:
-------
-
-[yii2](https://github.com/yiisoft/yii2)
-
-[swoole](https://github.com/swoole/swoole-src)
-
-[xavier-chen](https://github.com/xavier-chen/swoole_mqtt_php)
-
-
-# yii2-swoole-mqtt
+> Non-complete implementation of MQTT 3.1.1 in this project, Upgrading...
