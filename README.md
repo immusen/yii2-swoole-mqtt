@@ -56,9 +56,9 @@ Case A: Subscribe/Publish
 
 > 1, mqtt client subscribe topic: room/count/100011
 
-> 2.1, mqtt client publish: every time publish topic: room/join/100011, the subscribe side will get count+1, or publish topic: room/join/100011 get count -1.
+> 2.1, mqtt client publish: every time publish topic: room/join/100011, the subscribe side will get count+1, or publish topic: room/leave/100011 get count -1.
 
-> 2.2, redis client pulish: every time $redis->publish('async', 'room/join/100011'), the subscribe side will get count+1, or $redis->publish('async', 'room/join/100011') get count -1.
+> 2.2, redis client pulish: every time $redis->publish('async', 'room/join/100011'), the subscribe side will get count+1, or $redis->publish('async', 'room/leave/100011') get count -1.
 
 Case B: Publish(Notification Or Report)
 
