@@ -22,7 +22,7 @@ class ReportController extends Controller
     public function actionCoord($sn, $payload)
     {
         $record = time() . ',' . $payload . PHP_EOL;
-        file_put_contents('/tmp/report/' . $sn, $record, FILE_APPEND);
+        file_put_contents('/tmp/report_' . $sn, $record, FILE_APPEND);
     }
 
 }

@@ -21,7 +21,7 @@ class RoomController extends Controller
     public function actionCount($room_id)
     {
         //get current count
-        $count = $this->server->redis->hget('mqtt_record_hash_#room', $room_id);
+        $count = $this->redis->hget('mqtt_record_hash_#room', $room_id);
         //reply current count
         $this->publish($this->fd, $this->topic, $count ?: 0);
     }
@@ -37,7 +37,7 @@ class RoomController extends Controller
     public function actionJoin($room_id, $payload = '')
     {
         echo '# room ', $room_id, ' one person joined, #', $payload, PHP_EOL;
-        $count = $this->server->redis->hincrby('mqtt_record_hash_#room', $room_id, 1);
+        $count = $this->redis->hincrby('mqtt_record_hash_#room', $room_id, 1);
         $sub_topic = 'room/count/' . $room_id;
         return $this->publish($this->fdsInRds($sub_topic), $sub_topic, $count);
     }
@@ -50,7 +50,7 @@ class RoomController extends Controller
      */
     public function actionLeave($room_id)
     {
-        $count = $this->server->redis->hincrby('mqtt_record_hash_#room', $room_id, -1);
+        $count = $this->redis->hincrby('mqtt_record_hash_#room', $room_id, -1);
         $count = $count < 1 ? 0 : $count;
         $sub_topic = 'room/count/' . $room_id;
         return $this->publish($this->fdsInRds($sub_topic), $sub_topic, $count);

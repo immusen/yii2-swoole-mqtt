@@ -123,11 +123,10 @@ class Mqtt
 
     public function __construct($buffer)
     {
-        echo '# original: ' . PHP_EOL;
         $this->printStr($buffer);
         $this->buffer = $buffer;
         $this->decodeHeader();
-        echo '# message type: ', static::$tp_map[$this->tp], PHP_EOL;
+//        echo '# message type: ', static::$tp_map[$this->tp], PHP_EOL;
         $decoder = 'decode' . ucfirst(strtolower(static::$tp_map[$this->tp]));
         call_user_func([$this, $decoder]);
     }
@@ -188,17 +187,15 @@ class Mqtt
             static::REPLY_CONNACK_NO_AUTH => chr(0x20) . chr(2) . chr(0) . chr(0x05),
             static::REPLY_PUBACK => chr(0x40) . chr(2),
             static::REPLY_PUBREC => chr(0x50) . chr(2),
-            static::REPLY_PUBREL => chr(0x60) . chr(2),
+            static::REPLY_PUBREL => chr(0x62) . chr(2),
             static::REPLY_PUBCOMP => chr(0x70) . chr(2),
-            static::REPLY_SUBACK => chr(0x90) . chr(2),  //need requested QoS as payload
+            static::REPLY_SUBACK => chr(0x90) . ($payload === '' ? chr(2) : chr(2 + strlen($payload))),
             static::REPLY_UNSUBACK => chr(0xB0) . chr(2),
             static::REPLY_PINGRESP => chr(0xD0) . chr(0),
         ];
         $this->reply_message = $reply_flag_map[$flag];
         if (!empty($this->packet_id)) $this->reply_message .= $this->packet_id;
         if (!empty($payload)) $this->reply_message .= $payload;
-        echo '# reply: ' . PHP_EOL;
-        $this->printStr($this->reply_message);
     }
 
     private function decodePublish()
@@ -212,16 +209,20 @@ class Mqtt
         $this->payload = $this->buffer;
     }
 
+    private function decodePuback()
+    {
+        $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
+    }
+
     private function decodePubrec()
     {
-        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__, 1);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->setReplyMessage(static::REPLY_PUBREL);
     }
 
     private function decodePubrel()
     {
-        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__, 1);
+        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->setReplyMessage(static::REPLY_PUBCOMP);
     }
@@ -233,25 +234,23 @@ class Mqtt
      */
     private function decodePubcomp()
     {
-        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__, 1);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
     }
 
     //not support multiple topic
     private function decodeSubscribe()
     {
-        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__, 1);
+        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->topic = $this->bufPop();
         $this->req_qos = ord($this->bufPop(static::FL_FIXED));
-        $this->setReplyMessage(static::REPLY_SUBACK, $this->req_qos);
-
+        $this->setReplyMessage(static::REPLY_SUBACK, chr($this->req_qos));
     }
 
     //not support multiple topic
     private function decodeUnsubscribe()
     {
-        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__, 1);
+        if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->topic = $this->bufPop();
         $this->setReplyMessage(static::REPLY_UNSUBACK);
@@ -271,7 +270,7 @@ class Mqtt
     {
         if (1 === $flag) $len = 256 * ord($this->bufPop(0)) + ord($this->bufPop(0));
         if (strlen($this->buffer) < $len) return '';
-        preg_match('/(.{' . $len . '})(.*)/', $this->buffer, $matches);
+        preg_match('/^([\x{00}-\x{ff}]{' . $len . '})([\x{00}-\x{ff}]*)$/s', $this->buffer, $matches);
         $this->buffer = $matches[2];
         return $matches[1];
     }
@@ -343,7 +342,6 @@ class Mqtt
         return call_user_func([$this, 'get' . ucfirst($name)]);
     }
 
-
     public function printStr($string)
     {
         $strlen = strlen($string);
@@ -356,4 +354,11 @@ class Mqtt
             printf("%4d: %08b : 0x%02x : %s \n", $j, $num, $num, $chr);
         }
     }
+
+    public function __toString()
+    {
+        return '+-----------------------' . PHP_EOL
+            . '#TP:' . $this->tp . '  #Topic:' . $this->topic . '  #Msg:' . $this->payload . PHP_EOL;
+    }
+
 }

@@ -16,6 +16,7 @@ class Controller
     public $fd;
     public $topic;
     public $verb;
+    public $redis;
 
     /**
      * BaseController constructor.
@@ -30,41 +31,61 @@ class Controller
         $this->fd = $fd;
         $this->topic = $topic;
         $this->verb = $verb;
+        $redis = new \Redis();
+        $redis->connect('127.0.0.1', 6379);
+        $this->redis = $redis;
     }
 
     /**
      * Broadcast publish
      * @param $fds
      * @param $topic
-     * @param $connect
+     * @param $content
      * @return bool;
      */
-    public function publish($fds, $topic, $connect)
+    public function publish($fds, $topic, $content, $qos = 0)
     {
         if (!is_array($fds)) $fds = array($fds);
-        $msg = $this->buildBuffer($topic, $connect);
+        $msg = $this->buildBuffer($topic, $content, $qos);
         $result = 1;
-        do {
-            $fd = array_pop($fds);
-            if ($this->server->exist($fd))
+        $offline = [$topic];
+        while ($fds) {
+            $fd = (int)array_pop($fds);
+            if ($this->server->exist($fd)) {
                 $result &= $this->server->send($fd, $msg) ? 1 : 0;
-        } while ($fds);
+            } else {
+                $this->redis->srem('mqtt_sub_fds_set_#' . $topic, $fd);
+            }
+        }
         return !!$result;
     }
 
     public function fdsInRds($key, $prefix = '')
     {
         $prefix = $prefix ?: 'mqtt_sub_fds_set_#';
-        return $this->server->redis->smembers($prefix . $key);
+        $res = $this->redis->smembers($prefix . $key);
+        if (!$res) return [];
+        return $res;
     }
 
-    private function buildBuffer($topic, $content, $cmd = 0x30, $qos = 0, $retain = 0)
+    public function getClientInfo()
+    {
+        $res = ['u' => '', 'c' => ''];
+        $info = $this->redis->hget('mqtt_online_hash_client@fd', $this->fd);
+        if ($info)
+            $res = @unserialize($info);
+        return $res;
+    }
+
+    private function buildBuffer($topic, $content, $qos = 0x00, $cmd = 0x30, $retain = 0)
     {
         $buffer = "";
         $buffer .= $topic;
+        if ($qos > 0) $buffer .= chr(rand(0, 0xff)) . chr(rand(0, 0xff));
         $buffer .= $content;
         $head = " ";
-        $head{0} = chr($cmd);
+        $qos = (int)($qos == '' ? 0 : $qos);
+        $head{0} = chr($cmd + ($qos * 2));
         $head .= $this->setMsgLength(strlen($buffer) + 2);
         $package = $head . chr(0) . $this->setMsgLength(strlen($topic)) . $buffer;
         return $package;

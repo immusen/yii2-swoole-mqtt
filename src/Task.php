@@ -55,9 +55,9 @@ class Task
      * @return static
      * @throws \Exception
      */
-    public static function subscribe($fd, $topic)
+    public static function subscribe($fd, $topic, $req_qos)
     {
-        return new static($fd, $topic, 'subscribe');
+        return new static($fd, $topic, $req_qos, 'subscribe');
     }
 
     /**
@@ -92,10 +92,5 @@ class Task
             $this->func = isset($routes[2]) ? $routes[2] : 'default';
             $this->param = isset($routes[3]) ? $routes[3] : '';
         }
-    }
-
-    public function __destruct()
-    {
-        echo __CLASS__ . ' Destroyed...' . PHP_EOL;
     }
 }

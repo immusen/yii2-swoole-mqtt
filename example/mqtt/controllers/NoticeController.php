@@ -22,7 +22,7 @@ class NoticeController extends Controller
     public function actionSub($symbol = 'global')
     {
         //Check offline msg demo
-        $msg = $this->server->redis->get('mqtt_notice_offline_@' . $symbol);
+        $msg = $this->redis->get('mqtt_notice_offline_@' . $symbol);
         return $this->publish([$this->fd], $this->topic, $msg);
     }
 
@@ -37,7 +37,7 @@ class NoticeController extends Controller
     public function actionSend($symbol = 'global', $payload)
     {
         //get fds demo
-        $fds = $this->server->redis->smembers('mqtt_notice_fds_set_@' . $symbol);
+        $fds = $this->redis->smembers('mqtt_notice_fds_set_@' . $symbol);
         return $this->publish($fds, 'notice/sub/' . $symbol, $payload);
     }
 }
