@@ -6,7 +6,7 @@
  * Time: 下午11:07
  */
 
-namespace mirror\controllers;
+namespace mqtt\controllers;
 
 use immusen\mqtt\src\Controller;
 
