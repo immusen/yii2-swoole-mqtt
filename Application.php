@@ -107,7 +107,7 @@ class Application extends \yii\base\Application
 
     public function onClose($server, $fd, $from)
     {
-        $server->task(Task::internal('common/close/', $fd));
+        $server->task(Task::internal('common/close/' . $fd));
     }
 
     public function onTask(Server $server, $worker_id, $task_id, $task)
