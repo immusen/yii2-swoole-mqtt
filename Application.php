@@ -130,13 +130,6 @@ class Application extends \yii\base\Application
         echo 'Task finished #' . $task_id . '  #' . $data . PHP_EOL;
     }
 
-    private function onSubscribe($server, $fd, $topic, $reqqos = 0)
-    {
-        $server->tb_fds->set($fd, ['topic' => $topic]);
-        $server->tb_topics->set($topic, ['fd' => $fd, 'qos' => $reqqos]);
-        $server->task(Task::subscribe($fd, $topic, $reqqos));
-    }
-
     public function handleRequest($_)
     {
 
