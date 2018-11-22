@@ -82,6 +82,8 @@ MQTT Publish Topic:  "channel/join/100001"  with payload: "Foo"  will handle at:
     class ChannelController{
         public function actionJoin($channel_id, $who){
             echo "{$who} join in channel {$channel_id}";
+            #then broadcast update to all client who subscribed channel 100001
+            #$this->publish($fds, $sub_topic, $count);
         }
     }
 ```
