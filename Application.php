@@ -11,7 +11,6 @@ namespace immusen\mqtt;
 use Yii;
 use Swoole\Server;
 use Swoole\Coroutine\Redis;
-use Swoole\Table;
 use immusen\mqtt\src\Mqtt;
 use immusen\mqtt\src\Task;
 
@@ -31,6 +30,7 @@ class Application extends \yii\base\Application
             'task_ipc_mode' => 3,
             'debug_mode' => 1,
             'heartbeat_check_interval' => 60,
+            'heartbeat_idle_time' => 180,
             'daemonize' => Yii::$app->params['daemonize'],
             'log_file' => Yii::$app->getRuntimePath() . '/logs/app.log'
         ]);
@@ -41,6 +41,7 @@ class Application extends \yii\base\Application
         $server->on('Receive', [$this, 'onReceive']);
         $server->on('Close', [$this, 'onClose']);
         $server->on('WorkerStart', [$this, 'onWorkerStart']);
+        $server->session = [];
         $this->server = $server;
         $this->server->start();
     }
@@ -70,7 +71,6 @@ class Application extends \yii\base\Application
 
     public function onConnect($server, $fd, $from_id)
     {
-
     }
 
     public function onReceive(Server $server, $fd, $from, $buffer)
@@ -81,11 +81,11 @@ class Application extends \yii\base\Application
                 echo $m;
                 if ($m->tp == Mqtt::TP_CONNECT) {
                     if (Yii::$app->params['auth'] && Yii::$app->auth->judge($m->connectInfo) === false)
-                        $m->setReplyMessage(Mqtt::REPLY_CONNACK_NO_AUTH);
-                    $server->task(Task::internal('common/connect/' . $fd, $m->connectInfo));
+                        $m->replyConack(0x05);
+                    else
+                        $server->task(Task::internal('common/connect/' . $fd, $m->connectInfo));
                 }
-                if (!is_null($m->replyMessage))
-                    $server->send($fd, $m->replyMessage);
+                if (!is_null($m->ack)) $server->send($fd, $m->ack);
                 switch ($m->tp) {
                     case Mqtt::TP_PUBLISH:
                         return $server->task(Task::publish($fd, $m->getTopic(), $m->getPayload()));
@@ -132,6 +132,5 @@ class Application extends \yii\base\Application
 
     public function handleRequest($_)
     {
-
     }
 }

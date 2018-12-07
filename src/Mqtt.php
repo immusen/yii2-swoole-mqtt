@@ -9,7 +9,7 @@
 namespace immusen\mqtt\src;
 
 /**
- * Class Mqtt Model, Partially implemented of the Mqtt 3.1.1
+ * Class Slim PHP Mqtt Model
  * MQTT Version 3.1.1 Plus Errata 01 @see http://docs.oasis-open.org/mqtt/mqtt/v3.1.1/errata01/os/mqtt-v3.1.1-errata01-os-complete.html#_Toc442180866
  * @package immusen\mqtt\src
  */
@@ -52,9 +52,9 @@ class Mqtt
      */
     private $connect_info;
     /**
-     * @var string reply(ack) message
+     * @var string ack(reply) message
      */
-    private $reply_message;
+    private $ack;
     /**
      * @var string buffer
      */
@@ -85,23 +85,6 @@ class Mqtt
     const TP_DISCONNECT = 14;
 
     /**
-     * @reply reply(ack) message type
-     */
-    const REPLY_CONNACK_ACCEPT = 'CONNACK_00';
-    const REPLY_CONNACK_UNACCEPT = 'CONNACK_01';
-    const REPLY_CONNACK_REJ_ID = 'CONNACK_02';
-    const REPLY_CONNACK_SERV_UNAV = 'CONNACK_03';
-    const REPLY_CONNACK_BAD_AUTH_INFO = 'CONNACK_04';
-    const REPLY_CONNACK_NO_AUTH = 'CONNACK_05';
-    const REPLY_PUBACK = 'PUBACK';
-    const REPLY_PUBREC = 'PUBREC';
-    const REPLY_PUBREL = 'PUBREL';
-    const REPLY_PUBCOMP = 'PUBCOMP';
-    const REPLY_SUBACK = 'SUBACK';
-    const REPLY_UNSUBACK = 'UNSUBACK';
-    const REPLY_PINGRESP = 'PINGRESP';
-
-    /**
      * @var array message type map
      */
     private static $tp_map = [
@@ -126,7 +109,6 @@ class Mqtt
         $this->printStr($buffer);
         $this->buffer = $buffer;
         $this->decodeHeader();
-//        echo '# message type: ', static::$tp_map[$this->tp], PHP_EOL;
         $decoder = 'decode' . ucfirst(strtolower(static::$tp_map[$this->tp]));
         call_user_func([$this, $decoder]);
     }
@@ -167,69 +149,54 @@ class Mqtt
             $info['password'] = $this->bufPop();
         }
         $this->connect_info = $info;
-//        if($info['auth'] === 0) $this->setReplyMessage(static::REPLY_CONNACK_BAD_AUTH_INFO);
-        $this->setReplyMessage(static::REPLY_CONNACK_ACCEPT);
+//        if ($info['auth'] === 0) $this->replyConnack(0x04);
+        $this->replyConnack(0x00);
     }
 
     /**
-     * set reply message
-     * @param $flag
-     * @param string $payload
+     * decode publish and reply puback/pubrec
      */
-    public function setReplyMessage($flag, $payload = '')
-    {
-        $reply_flag_map = [
-            static::REPLY_CONNACK_ACCEPT => chr(0x20) . chr(2) . chr(0) . chr(0x00),
-            static::REPLY_CONNACK_UNACCEPT => chr(0x20) . chr(2) . chr(0) . chr(0x01),
-            static::REPLY_CONNACK_REJ_ID => chr(0x20) . chr(2) . chr(0) . chr(0x02),
-            static::REPLY_CONNACK_SERV_UNAV => chr(0x20) . chr(2) . chr(0) . chr(0x03),
-            static::REPLY_CONNACK_BAD_AUTH_INFO => chr(0x20) . chr(2) . chr(0) . chr(0x04),
-            static::REPLY_CONNACK_NO_AUTH => chr(0x20) . chr(2) . chr(0) . chr(0x05),
-            static::REPLY_PUBACK => chr(0x40) . chr(2),
-            static::REPLY_PUBREC => chr(0x50) . chr(2),
-            static::REPLY_PUBREL => chr(0x62) . chr(2),
-            static::REPLY_PUBCOMP => chr(0x70) . chr(2),
-            static::REPLY_SUBACK => chr(0x90) . ($payload === '' ? chr(2) : chr(2 + strlen($payload))),
-            static::REPLY_UNSUBACK => chr(0xB0) . chr(2),
-            static::REPLY_PINGRESP => chr(0xD0) . chr(0),
-        ];
-        $this->reply_message = $reply_flag_map[$flag];
-        if (!empty($this->packet_id)) $this->reply_message .= $this->packet_id;
-        if (!empty($payload)) $this->reply_message .= $payload;
-    }
-
     private function decodePublish()
     {
         $this->topic = $this->bufPop();
         if ($this->qos > 0) {
             $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
-            if ($this->qos === 1) $this->setReplyMessage(static::REPLY_PUBACK);
-            if ($this->qos === 2) $this->setReplyMessage(static::REPLY_PUBREC);
+            if ($this->qos === 1) $this->ack = chr(0x40) . chr(0x02) . $this->packet_id; //puback
+            if ($this->qos === 2) $this->ack = chr(0x50) . chr(0x02) . $this->packet_id; //pubrec
         }
         $this->payload = $this->buffer;
     }
 
+    /**
+     * decode puback
+     */
     private function decodePuback()
     {
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
     }
 
+    /**
+     * decode pubrec and reply pubrel, 2nd packet of QoS 2 protocol exchange
+     */
     private function decodePubrec()
     {
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
-        $this->setReplyMessage(static::REPLY_PUBREL);
+        $this->ack = chr(0x62) . chr(0x02) . $this->packet_id; //pubrel
     }
 
+    /**
+     * decode pubrel and reply pubcomp, 3rd packet of QoS 2 protocol exchange
+     * @throws \Exception
+     */
     private function decodePubrel()
     {
         if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
-        $this->setReplyMessage(static::REPLY_PUBCOMP);
+        $this->ack = chr(0x70) . chr(0x02) . $this->packet_id; //pubcomp
     }
 
     /**
-     * PUBCOMP
-     * fourth and final packet of the QoS 2 protocol exchange
+     * decode pubcomp, 4th and final packet of the QoS 2 protocol exchange
      * @throws \Exception
      */
     private function decodePubcomp()
@@ -237,33 +204,45 @@ class Mqtt
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
     }
 
-    //not support multiple topic
+    /**
+     * decode subscribe, not support multiple topic
+     * @throws \Exception
+     */
     private function decodeSubscribe()
     {
         if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->topic = $this->bufPop();
         $this->req_qos = ord($this->bufPop(static::FL_FIXED));
-        $this->setReplyMessage(static::REPLY_SUBACK, chr($this->req_qos));
+        $payload = chr($this->req_qos);
+        $this->ack = chr(0x90) . ($payload === '' ? chr(0x02) : chr(0x02 + strlen($payload))) . $this->packet_id . $payload; //suback
     }
 
-    //not support multiple topic
+    /**
+     * decode unsubscribe, not support multiple topic
+     * @throws \Exception
+     */
     private function decodeUnsubscribe()
     {
         if ($this->qos !== 1) throw new \Exception(' bad buffer #' . __METHOD__);
         $this->packet_id = $this->bufPop(static::FL_FIXED, 2);
         $this->topic = $this->bufPop();
-        $this->setReplyMessage(static::REPLY_UNSUBACK);
+        $this->ack = chr(0xB0) . chr(0x02) . $this->packet_id;  //unsuback
     }
 
     private function decodePingreq()
     {
-        $this->setReplyMessage(static::REPLY_PINGRESP);
+        $this->ack = chr(0xD0) . chr(0);
     }
 
     private function decodeDisconnect()
     {
-        //Nothing here, Connect close in caller
+        //Nothing here, Connect close in server
+    }
+
+    public function replyConnack($flag = 0x00)
+    {
+        $this->ack = chr(0x20) . chr(0x02) . chr(0) . chr($flag);
     }
 
     private function bufPop($flag = 1, $len = 1)
@@ -295,7 +274,6 @@ class Mqtt
     {
         return $this->tp;
     }
-
 
     /**
      * @return mixed
@@ -332,9 +310,9 @@ class Mqtt
     /**
      * @return string
      */
-    public function getReplyMessage()
+    public function getAck()
     {
-        return $this->reply_message;
+        return $this->ack;
     }
 
     public function __get($name)
@@ -357,8 +335,7 @@ class Mqtt
 
     public function __toString()
     {
-        return '+-----------------------' . PHP_EOL
-            . '#TP:' . $this->tp . '  #Topic:' . $this->topic . '  #Msg:' . $this->payload . PHP_EOL;
+        return '#TP:' . $this->tp . '  #Topic:' . $this->topic . '  #Msg:' . $this->payload . PHP_EOL;
     }
 
 }
