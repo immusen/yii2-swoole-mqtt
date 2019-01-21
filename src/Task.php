@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: immusen
  * Date: 2018/10/10
- * Time: 下午1:43
+ * Time: 1:43 PM
  */
 
 namespace immusen\mqtt\src;
@@ -30,9 +30,9 @@ class Task
     {
         $this->fd = $fd;
         $this->topic = $topic;
-        $this->resolve($topic);
-        $this->body = $payload;
         $this->verb = $verb;
+        $this->body = $payload;
+        $this->resolve($topic);
     }
 
     /**
@@ -87,10 +87,20 @@ class Task
 
     private function resolve($topic)
     {
-        if (preg_match('/(\w+)\/?(\w*)\/?(.*)/', $topic, $routes)) {
+        if (preg_match('/(\w+)\/?(\w*)\/?(.*)/s', $topic, $routes)) {
             $this->class = $routes[1];
             $this->func = isset($routes[2]) ? $routes[2] : 'default';
             $this->param = isset($routes[3]) ? $routes[3] : '';
         }
+        //resolve async task from redis pub/sub, controller/action/param/payload
+        if ($this->verb == 'async' && preg_match('/(\w+)\/(.*)/s', $this->param, $matches)) {
+            $this->param = $matches[1];
+            $this->body = $matches[2];
+        }
+    }
+
+    public function __toString()
+    {
+        return '#Task# verb: ' . $this->verb . ' controller: ' . $this->class . ' action: ' . $this->func . ' param: ' . $this->param . ' payload: ' . $this->body . PHP_EOL;
     }
 }

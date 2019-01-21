@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: immusen
  * Date: 2018/10/10
- * Time: 下午2:27
+ * Time: 2:27 PM
  */
 
 namespace immusen\mqtt\src;
@@ -27,13 +27,11 @@ class Controller
      */
     public function __construct(Server $server, $fd, $topic, $verb = 'publish')
     {
-        $this->server = $server;
         $this->fd = $fd;
         $this->topic = $topic;
         $this->verb = $verb;
-        $redis = new \Redis();
-        $redis->connect('127.0.0.1', 6379);
-        $this->redis = $redis;
+        $this->redis = $server->redis;
+        $this->server = $server;
     }
 
     /**
@@ -60,7 +58,7 @@ class Controller
         return !!$result;
     }
 
-    public function fdsInRds($key, $prefix = '')
+    public function subFds($key, $prefix = '')
     {
         $prefix = $prefix ?: 'mqtt_sub_fds_set_#';
         $res = $this->redis->smembers($prefix . $key);
@@ -84,7 +82,6 @@ class Controller
         if ($qos > 0) $buffer .= chr(rand(0, 0xff)) . chr(rand(0, 0xff));
         $buffer .= $content;
         $head = " ";
-        $qos = (int)($qos == '' ? 0 : $qos);
         $head{0} = chr($cmd + ($qos * 2));
         $head .= $this->setMsgLength(strlen($buffer) + 2);
         $package = $head . chr(0) . $this->setMsgLength(strlen($topic)) . $buffer;

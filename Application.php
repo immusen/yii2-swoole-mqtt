@@ -2,17 +2,17 @@
 /**
  * Created by PhpStorm.
  * User: immusen
- * Date: 2018/10/1o
- * Time: 下午3:50
+ * Date: 2018/10/10
+ * Time: 3:50 PM
  */
 
 namespace immusen\mqtt;
 
 use Yii;
 use Swoole\Server;
-use Swoole\Coroutine\Redis;
 use immusen\mqtt\src\Mqtt;
 use immusen\mqtt\src\Task;
+use immusen\mqtt\src\Redis;
 
 class Application extends \yii\base\Application
 {
@@ -41,7 +41,8 @@ class Application extends \yii\base\Application
         $server->on('Receive', [$this, 'onReceive']);
         $server->on('Close', [$this, 'onClose']);
         $server->on('WorkerStart', [$this, 'onWorkerStart']);
-        $server->session = [];
+        //Mount redis on $server
+        $server->redis = Redis::getRedis();
         $this->server = $server;
         $this->server->start();
     }
@@ -54,12 +55,12 @@ class Application extends \yii\base\Application
     public function onWorkerStart(Server $server, $id)
     {
         if ($id != 0) return;
-        $server->task(Task::internal('common/init'));
         go(function () use ($server) {
-            //this Redis is Swoole\Coroutine\Redis.
-            $redis = new Redis;
-            $result = $redis->connect('127.0.0.1', 6379);
+            $redis = new \Swoole\Coroutine\Redis;
+            $config = Yii::$app->params['redis'];
+            $result = $redis->connect($config['host'], $config['port']);
             if (!$result) return;
+            if(!empty($config['auth']) && !$redis->auth($config['auth'])) return;
             while (true) {
                 //Redis pub/sub feature; Follow the task structure, Recommend use redis publish like this: redis->publish('async', 'send/sms/15600008888').
                 $result = $redis->subscribe(['async']);

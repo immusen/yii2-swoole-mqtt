@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: immusen
  * Date: 2018/10/15
- * Time: 上午17:55
+ * Time: 17:55
  */
 
 namespace immusen\mqtt\src;
@@ -149,8 +149,8 @@ class Mqtt
             $info['password'] = $this->bufPop();
         }
         $this->connect_info = $info;
-//        if ($info['auth'] === 0) $this->replyConnack(0x04);
-        $this->replyConnack(0x00);
+//        if ($info['auth'] === 0) $this->replyConack(0x04);
+        $this->replyConack(0x00);
     }
 
     /**
@@ -240,7 +240,7 @@ class Mqtt
         //Nothing here, Connect close in server
     }
 
-    public function replyConnack($flag = 0x00)
+    public function replyConack($flag = 0x00)
     {
         $this->ack = chr(0x20) . chr(0x02) . chr(0) . chr($flag);
     }

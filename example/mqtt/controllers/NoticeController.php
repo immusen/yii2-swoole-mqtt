@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: immusen
  * Date: 2018/10/8
- * Time: 下午6:07
+ * Time: 6:07 PM
  */
 
 namespace mqtt\controllers;

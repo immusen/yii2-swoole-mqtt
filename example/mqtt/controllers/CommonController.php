@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: immusen
  * Date: 2018/10/14
- * Time: 下午11:07
+ * Time: 11:07 PM
  */
 
 namespace mqtt\controllers;
@@ -48,18 +48,6 @@ class CommonController extends Controller
             $this->redis->srem('mqtt_sub_fds_set_#' . $topic, $fd);
             $this->redis->srem('mqtt_sub_topics_set_#' . $fd, $topic);
         } while ($topics);
-        return true;
-    }
-
-    public function actionInit()
-    {
-        $cursor = 0;
-        while (true) {
-            list($cursor, $keys) = \Yii::$app->redis->scan($cursor, 'MATCH', 'mqtt_*', 'COUNT', 50);
-            if ($keys)
-                echo (call_user_func_array([\Yii::$app->redis, 'del'], $keys)), PHP_EOL;
-            if ($cursor == 0) break;
-        }
         return true;
     }
 
